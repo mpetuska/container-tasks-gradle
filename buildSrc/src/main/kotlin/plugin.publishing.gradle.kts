@@ -1,11 +1,15 @@
-import org.gradle.model.internal.core.ModelNodes.withType
-
 plugins {
   id("com.gradle.plugin-publish")
+  id("org.jetbrains.dokka")
   `java-gradle-plugin`
   `maven-publish`
   signing
 }
+
+description = """
+  Provides easy configuration and tasks for managing your jekyll projects via gradle. 
+  Supports running via native jekyll installations as well as podman or docker container runtimes.
+""".trimIndent()
 
 gradlePlugin {
   plugins {
@@ -21,7 +25,8 @@ gradlePlugin {
 pluginBundle {
   website = "https://github.com/mpetuska/${rootProject.name}"
   vcsUrl = "https://github.com/mpetuska/${rootProject.name}.git"
-  tags = listOf("jekyll", "gradle", "documentation", "ssg")
+  tags = listOf("jekyll", "documentation", "ssg")
+  description = project.description
 }
 
 publishing {

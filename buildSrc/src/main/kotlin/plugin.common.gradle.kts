@@ -12,7 +12,7 @@ plugins {
 println("BUILD KOTLIN VERSION: $embeddedKotlinVersion")
 
 detekt {
-  config.from(projectDir.resolve("detekt.yml"))
+  config.from(rootDir.resolve("detekt.yml"))
   buildUponDefaultConfig = true
 }
 

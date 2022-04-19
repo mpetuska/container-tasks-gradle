@@ -8,6 +8,7 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.options.Option
 import java.io.File
 import java.net.URI
@@ -26,7 +27,7 @@ public abstract class JekyllBuildTask : JekyllExecTask() {
   @Option(
     option = "config",
     description = "Specify config files instead of using _config.yml automatically. " +
-        "Settings in later files override settings in earlier files."
+      "Settings in later files override settings in earlier files."
   )
   public fun config(paths: List<String>) {
     paths.map(::File).forEach(config::from)
@@ -98,9 +99,9 @@ public abstract class JekyllBuildTask : JekyllExecTask() {
   @get:Option(
     option = "incremental",
     description = "Enable the experimental incremental build feature. " +
-        "Incremental build only re-builds posts and pages that have changed, " +
-        "resulting in significant performance improvements for large sites, " +
-        "but may also break site generation in certain cases."
+      "Incremental build only re-builds posts and pages that have changed, " +
+      "resulting in significant performance improvements for large sites, " +
+      "but may also break site generation in certain cases."
   )
   public abstract val incremental: Property<Boolean>
 
@@ -134,14 +135,32 @@ public abstract class JekyllBuildTask : JekyllExecTask() {
   @get:Option(option = "trace", description = "Show the full backtrace when an error occurs.")
   public abstract val trace: Property<Boolean>
 
+  @get:InputFiles
+  public abstract val source: ConfigurableFileCollection
+
+  @Option(option = "source", description = "Change the directory where Jekyll will read files")
+  public fun source(paths: List<String>) {
+    paths.forEach(source::from)
+  }
+
+  @get:OutputDirectory
+  public abstract val destination: DirectoryProperty
+
+  @Option(option = "destination", description = "Change the directory where Jekyll will write files")
+  public fun destination(path: String) {
+    destination.set(File(path))
+  }
+
   init {
     description = "Builds jekyll website"
+    destination.convention(workingDir.dir("../destination"))
   }
 
   override val command: String = "build"
 
   override fun beforeAction() {
     super.beforeAction()
+    if (destination.isPresent) setContainerVolume(destination.get().asFile, containerDestination)
     config.forEach {
       setContainerVolume(it, containerRoot.resolve("_config/${it.name}"))
     }
@@ -150,6 +169,12 @@ public abstract class JekyllBuildTask : JekyllExecTask() {
     }
     layouts.asFile.orNull?.let {
       setContainerVolume(it, containerRoot.resolve("_layouts/${it.name}"))
+    }
+    project.copy {
+      it.from(source) { cp ->
+        cp.exclude(workingDir.asFileTree.files.map(File::getAbsolutePath))
+      }
+      it.into(workingDir)
     }
   }
 
@@ -170,6 +195,8 @@ public abstract class JekyllBuildTask : JekyllExecTask() {
     if (strictFrontMatter.getOrElse(false)) args += "--strict_front_matter"
     if (baseurl.isPresent) args += listOf("--baseurl", baseurl.toString())
     if (trace.getOrElse(false)) args += "--trace"
+    containerPath(workingDir.get().asFile)?.let { args += listOf("--source", it) }
+    if (destination.isPresent) containerPath(destination.get().asFile)?.let { args += listOf("--destination", it) }
     config.mapNotNull(::containerPath).joinToString(",").takeIf(String::isNotBlank)?.let {
       args += listOf("--config", it)
     }

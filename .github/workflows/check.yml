@@ -50,13 +50,9 @@ jobs:
           path: |
             **/build/reports
 
-      - name: Gradle Check Sandbox
-        working-directory: sandbox
-        run: ./gradlew check --scan
-
       - name: Gradle Assemble
         working-directory: sandbox
-        run: ./gradlew assemble pack --scan
+        run: ./gradlew setupMain --scan
 
       - uses: actions/upload-artifact@v2
         if: ${{ always() }}
@@ -64,24 +60,3 @@ jobs:
           name: sandbox-${{ runner.os }}
           path: |
             sandbox/**/build/reports
-            sandbox/**/build/publications
-
-      - name: ts-consumer Install
-        working-directory: sandbox/ts-consumer
-        run: yarn install
-
-      - name: ts-consumer Build
-        working-directory: sandbox/ts-consumer
-        run: yarn build
-
-      - name: ts-consumer Run
-        working-directory: sandbox/ts-consumer
-        run: yarn start
-
-      - uses: actions/upload-artifact@v2
-        if: ${{ always() }}
-        with:
-          name: ts-consumer-${{ runner.os }}
-          path: |
-            sandbox/ts-consumer/build
-            sandbox/ts-consumer/node_modules/@mpetuska

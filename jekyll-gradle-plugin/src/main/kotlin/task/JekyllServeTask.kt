@@ -89,7 +89,6 @@ public abstract class JekyllServeTask : JekyllBuildTask() {
   @get:Option(option = "show-dir-listing", description = "Show a directory listing instead of loading your index file.")
   public abstract val showDirListing: Property<Boolean>
 
-
   @get:Input
   @get:Optional
   public abstract val sslKey: RegularFileProperty
@@ -112,6 +111,7 @@ public abstract class JekyllServeTask : JekyllBuildTask() {
     description = "Serves jekyll website"
     outputs.upToDateWhen { false }
     ignoreExitValue.convention(true)
+    host.convention("localhost")
     port.convention(project.provider { findPort(4000) })
     liveReloadPort.convention(project.provider { findPort(35729) })
     liveReload.convention(true)
@@ -130,6 +130,7 @@ public abstract class JekyllServeTask : JekyllBuildTask() {
   }
 
   override fun beforeAction() {
+    super.beforeAction()
     sslKey.asFile.orNull?.let { setContainerVolume(it, containerRoot.resolve("_ssl-key/${it.name}")) }
     sslCert.asFile.orNull?.let { setContainerVolume(it, containerRoot.resolve("_ssl-cert/${it.name}")) }
   }
@@ -155,8 +156,8 @@ public abstract class JekyllServeTask : JekyllBuildTask() {
   }
 
   override fun prepareContainerArgs(mode: JekyllMode): List<String> {
-    val args = mutableListOf("-p=[::1]:${port.get()}:${port.get()}")
-    if (liveReloadPort.isPresent) args += "-p=[::1]:${liveReloadPort.get()}:${liveReloadPort.get()}"
-    return args + super.prepareContainerArgs(mode)
+    val args = mutableListOf("--network=host")
+    if (host.isPresent) args += "--hostname=${host.get()}"
+    return super.prepareContainerArgs(mode) + args
   }
 }
