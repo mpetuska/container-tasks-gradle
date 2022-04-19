@@ -17,6 +17,11 @@ import java.net.URI
 public abstract class JekyllBuildTask : JekyllExecTask() {
   @get:Input
   @get:Optional
+  @get:Option(option = "--disable-disk-cache", description = "Disable caching to disk in non-safe mode")
+  public abstract val disableBuildCache: Property<Boolean>
+
+  @get:Input
+  @get:Optional
   @get:Option(option = "watch", description = "Enable auto-regeneration of the site when files are modified.")
   public abstract val watch: Property<Boolean>
 
@@ -154,6 +159,7 @@ public abstract class JekyllBuildTask : JekyllExecTask() {
   init {
     description = "Builds jekyll website"
     destination.convention(workingDir.dir("../destination"))
+    disableBuildCache.convention(true)
   }
 
   override val command: String = "build"
@@ -180,7 +186,7 @@ public abstract class JekyllBuildTask : JekyllExecTask() {
 
   override fun prepareJekyllArgs(mode: JekyllMode): List<String> {
     val args = mutableListOf<String>()
-    args += "--disable-disk-cache"
+    if (disableBuildCache.getOrElse(false)) args += "--disable-disk-cache"
     if (watch.getOrElse(false)) args += "--watch"
     if (watch.getOrElse(false)) args += "--drafts"
     if (future.getOrElse(false)) args += "--future"
