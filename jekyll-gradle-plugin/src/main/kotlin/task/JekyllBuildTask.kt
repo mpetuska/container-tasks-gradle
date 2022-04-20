@@ -31,8 +31,7 @@ public abstract class JekyllBuildTask : JekyllExecTask() {
 
   @Option(
     option = "config",
-    description = "Specify config files instead of using _config.yml automatically. " +
-      "Settings in later files override settings in earlier files."
+    description = "Specify config files instead of using _config.yml automatically. " + "Settings in later files override settings in earlier files."
   )
   public fun config(paths: List<String>) {
     paths.map(::File).forEach(config::from)
@@ -74,8 +73,7 @@ public abstract class JekyllBuildTask : JekyllExecTask() {
   @get:Input
   @get:Optional
   @get:Option(
-    option = "lsi",
-    description = "Produce an index for related posts. Requires the classifier-reborn plugin."
+    option = "lsi", description = "Produce an index for related posts. Requires the classifier-reborn plugin."
   )
   public abstract val lsi: Property<Boolean>
 
@@ -103,10 +101,7 @@ public abstract class JekyllBuildTask : JekyllExecTask() {
   @get:Optional
   @get:Option(
     option = "incremental",
-    description = "Enable the experimental incremental build feature. " +
-      "Incremental build only re-builds posts and pages that have changed, " +
-      "resulting in significant performance improvements for large sites, " +
-      "but may also break site generation in certain cases."
+    description = "Enable the experimental incremental build feature. " + "Incremental build only re-builds posts and pages that have changed, " + "resulting in significant performance improvements for large sites, " + "but may also break site generation in certain cases."
   )
   public abstract val incremental: Property<Boolean>
 
@@ -140,12 +135,12 @@ public abstract class JekyllBuildTask : JekyllExecTask() {
   @get:Option(option = "trace", description = "Show the full backtrace when an error occurs.")
   public abstract val trace: Property<Boolean>
 
-  @get:InputFiles
-  public abstract val source: ConfigurableFileCollection
+  @get:InputDirectory
+  public abstract val source: DirectoryProperty
 
   @Option(option = "source", description = "Change the directory where Jekyll will read files")
-  public fun source(paths: List<String>) {
-    paths.forEach(source::from)
+  public fun source(path: String) {
+    source.set(File(path))
   }
 
   @get:OutputDirectory
@@ -158,7 +153,7 @@ public abstract class JekyllBuildTask : JekyllExecTask() {
 
   init {
     description = "Builds jekyll website"
-    destination.convention(workingDir.dir("../destination"))
+    destination.convention(workingDir.dir("_site"))
     disableBuildCache.convention(true)
   }
 
@@ -166,26 +161,15 @@ public abstract class JekyllBuildTask : JekyllExecTask() {
 
   override fun beforeAction() {
     super.beforeAction()
-    if (destination.isPresent) setContainerVolume(destination.get().asFile, containerDestination)
-    config.forEach {
-      setContainerVolume(it, containerRoot.resolve("_config/${it.name}"))
-    }
-    plugins.forEach {
-      setContainerVolume(it, containerRoot.resolve("_plugins/${it.name}"))
-    }
-    layouts.asFile.orNull?.let {
-      setContainerVolume(it, containerRoot.resolve("_layouts/${it.name}"))
-    }
-    project.copy {
-      it.from(source) { cp ->
-        cp.exclude(workingDir.asFileTree.files.map(File::getAbsolutePath))
-      }
-      it.into(workingDir)
-    }
+    if (destination.isPresent) addContainerVolume(destination.asFile.get())
+    if (source.isPresent) addContainerVolume(source.asFile.get())
+    config.forEach(::addContainerVolume)
+    plugins.forEach(::addContainerVolume)
+    layouts.asFile.orNull?.let(::addContainerVolume)
   }
 
   override fun prepareJekyllArgs(mode: JekyllMode): List<String> {
-    val args = mutableListOf<String>()
+    val args = super.prepareJekyllArgs(mode).toMutableList()
     if (disableBuildCache.getOrElse(false)) args += "--disable-disk-cache"
     if (watch.getOrElse(false)) args += "--watch"
     if (watch.getOrElse(false)) args += "--drafts"
@@ -201,17 +185,15 @@ public abstract class JekyllBuildTask : JekyllExecTask() {
     if (strictFrontMatter.getOrElse(false)) args += "--strict_front_matter"
     if (baseurl.isPresent) args += listOf("--baseurl", baseurl.toString())
     if (trace.getOrElse(false)) args += "--trace"
-    containerPath(workingDir.get().asFile)?.let { args += listOf("--source", it) }
-    if (destination.isPresent) containerPath(destination.get().asFile)?.let { args += listOf("--destination", it) }
-    config.mapNotNull(::containerPath).joinToString(",").takeIf(String::isNotBlank)?.let {
+    if (source.isPresent) args += listOf("--source", source.asFile.get().absolutePath)
+    if (destination.isPresent) args += listOf("--destination", destination.asFile.get().absolutePath)
+    config.joinToString(",", transform = File::getAbsolutePath).takeIf(String::isNotBlank)?.let {
       args += listOf("--config", it)
     }
-    plugins.mapNotNull(::containerPath).joinToString(",").takeIf(String::isNotBlank)?.let {
+    plugins.joinToString(",", transform = File::getAbsolutePath).takeIf(String::isNotBlank)?.let {
       args += listOf("--plugins", it)
     }
-    if (layouts.isPresent) containerPath(layouts.asFile.get())?.let {
-      args += listOf("--layouts", it)
-    }
-    return super.prepareJekyllArgs(mode) + args
+    if (layouts.isPresent) args += listOf("--layouts", layouts.asFile.get().absolutePath)
+    return args
   }
 }

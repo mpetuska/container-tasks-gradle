@@ -7,10 +7,12 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.options.Option
+import org.gradle.work.DisableCachingByDefault
 import java.io.File
 import java.net.ServerSocket
 
 @Suppress("LeakingThis")
+@DisableCachingByDefault(because = "Not worth caching")
 public abstract class JekyllServeTask : JekyllBuildTask() {
 
   @get:Input
@@ -109,7 +111,6 @@ public abstract class JekyllServeTask : JekyllBuildTask() {
 
   init {
     description = "Serves jekyll website"
-    outputs.upToDateWhen { false }
     ignoreExitValue.convention(true)
     host.convention("localhost")
     port.convention(project.provider { findPort(4000) })
@@ -131,8 +132,8 @@ public abstract class JekyllServeTask : JekyllBuildTask() {
 
   override fun beforeAction() {
     super.beforeAction()
-    sslKey.asFile.orNull?.let { setContainerVolume(it, containerRoot.resolve("_ssl-key/${it.name}")) }
-    sslCert.asFile.orNull?.let { setContainerVolume(it, containerRoot.resolve("_ssl-cert/${it.name}")) }
+    if (sslKey.isPresent) addContainerVolume(sslKey.asFile.get())
+    if (sslCert.isPresent) addContainerVolume(sslCert.asFile.get())
   }
 
   override fun prepareJekyllArgs(mode: JekyllMode): List<String> {
@@ -150,8 +151,8 @@ public abstract class JekyllServeTask : JekyllBuildTask() {
     if (detach.getOrElse(false)) args += "--detach"
     if (skipInitialBuild.getOrElse(false)) args += "--skip-initial-build"
     if (showDirListing.getOrElse(false)) args += "--show-dir-listing"
-    if (sslKey.isPresent) containerPath(sslKey.get().asFile)?.let { args += listOf("--ssl-key", it) }
-    if (sslCert.isPresent) containerPath(sslCert.get().asFile)?.let { args += listOf("--ssl-cert", it) }
+    if (sslKey.isPresent) args += listOf("--ssl-key", sslKey.asFile.get().absolutePath)
+    if (sslCert.isPresent) args += listOf("--ssl-cert", sslCert.asFile.get().absolutePath)
     return super.prepareJekyllArgs(mode) + args
   }
 

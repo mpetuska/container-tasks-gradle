@@ -27,7 +27,8 @@ public abstract class JekyllExecTask : ContainerExecTask("jekyll") {
   }
 
   protected override fun beforeAction() {
-    setContainerVolume(workingDir.get().asFile, containerPwd)
+    super.beforeAction()
+    addContainerVolume(workingDir.asFile.get())
   }
 
   protected override fun prepareCommandArgs(mode: JekyllMode): List<String> {

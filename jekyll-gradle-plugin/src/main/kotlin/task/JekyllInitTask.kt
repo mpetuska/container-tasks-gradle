@@ -9,9 +9,11 @@ import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.options.Option
+import org.gradle.work.DisableCachingByDefault
 import java.io.File
 
 @Suppress("LeakingThis")
+@DisableCachingByDefault(because = "Not worth caching")
 public abstract class JekyllInitTask : JekyllExecTask() {
   @get:Input
   @get:Optional
@@ -79,23 +81,17 @@ public abstract class JekyllInitTask : JekyllExecTask() {
 
   init {
     description = "Initialises jekyll website"
-    skipBundle.convention(true)
-    outputs.upToDateWhen { false }
   }
 
   override val command: String = "new"
 
   override fun beforeAction() {
+    if (force.getOrElse(false)) workingDir.asFile.get().deleteRecursively()
+    if (source.isPresent) addContainerVolume(source.asFile.get())
+    if (destination.isPresent) addContainerVolume(destination.asFile.get())
+    plugins.forEach(::addContainerVolume)
+    layouts.asFile.orNull?.let(::addContainerVolume)
     super.beforeAction()
-    workingDir.asFile.get().mkdirs()
-    if (source.isPresent) setContainerVolume(source.get().asFile, containerDestination)
-    if (destination.isPresent) setContainerVolume(destination.get().asFile, containerDestination)
-    plugins.forEach {
-      setContainerVolume(it, containerRoot.resolve("_plugins/${it.name}"))
-    }
-    layouts.asFile.orNull?.let {
-      setContainerVolume(it, containerRoot.resolve("_layouts/${it.name}"))
-    }
   }
 
   override fun prepareJekyllArgs(mode: JekyllMode): List<String> {
@@ -104,15 +100,13 @@ public abstract class JekyllInitTask : JekyllExecTask() {
     if (blank.getOrElse(false)) args += "--blank"
     if (skipBundle.getOrElse(false)) args += "--skip-bundle"
     if (trace.getOrElse(false)) args += "--trace"
-    if (source.isPresent) containerPath(source.get().asFile)?.let { args += listOf("--destination", it) }
-    if (destination.isPresent) containerPath(destination.get().asFile)?.let { args += listOf("--destination", it) }
+    if (source.isPresent) args += listOf("--source", source.asFile.get().absolutePath)
+    if (destination.isPresent) args += listOf("--destination", destination.asFile.get().absolutePath)
     if (profile.getOrElse(false)) args += "--profile"
-    plugins.mapNotNull(::containerPath).joinToString(",").takeIf(String::isNotBlank)?.let {
+    plugins.joinToString(",", transform = File::getAbsolutePath).takeIf(String::isNotBlank)?.let {
       args += listOf("--plugins", it)
     }
-    if (layouts.isPresent) containerPath(layouts.asFile.get())?.let {
-      args += listOf("--layouts", it)
-    }
+    if (layouts.isPresent) args += listOf("--layouts", layouts.asFile.get().absolutePath)
     return super.prepareJekyllArgs(mode) + args
   }
 

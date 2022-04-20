@@ -59,25 +59,23 @@ public abstract class ContainerExecTask internal constructor(private val executa
   protected abstract val execHandleFactory: ExecHandleFactory
 
   init {
-    workingDir.convention(project.layout.dir(project.provider { temporaryDir.resolve("sources") }))
+    workingDir.convention(project.layout.dir(project.provider { temporaryDir }))
   }
 
-  private val containerVolumes = mutableMapOf<String, String>()
+  private val containerVolumes = mutableSetOf<String>()
 
-  private fun containerVolume(hostPath: String): String? = containerVolumes[hostPath]
-    ?.let { "-v=$hostPath:$it" }
-    ?.let { if (resolvedMode == DOCKER) it else "$it:Z" }
+  private fun getContainerVolume(hostPath: String): String? = getContainerVolume(File(hostPath))
 
-  protected fun containerVolume(hostFile: File): String? = containerVolume(hostFile.absolutePath)
-
-  protected fun setContainerVolume(hostFile: File, containerFile: File): String {
+  private fun getContainerVolume(hostFile: File): String? = if (hostFile.exists()) {
     val hostPath = hostFile.absolutePath
-    containerVolumes[hostPath] = containerFile.absolutePath
-    return hostPath
-  }
+    "-v=$hostPath:$hostPath"
+      .let { if (resolvedMode == DOCKER) it else "$it:Z" }
+  } else null
 
-  protected fun containerPath(hostFile: File): String? =
-    if (resolvedMode == NATIVE) hostFile.absolutePath else containerVolumes[hostFile.absolutePath]
+  protected fun addContainerVolume(hostFile: File) {
+    hostFile.mkdirs()
+    containerVolumes.add(hostFile.absolutePath)
+  }
 
   @TaskAction
   private fun action() {
@@ -145,14 +143,14 @@ public abstract class ContainerExecTask internal constructor(private val executa
   }
 
   protected open fun beforeAction() {
-    setContainerVolume(workingDir.get().asFile, containerPwd)
+    addContainerVolume(workingDir.asFile.get())
+    addContainerVolume(project.rootDir.resolve(".git"))
   }
 
   protected open fun afterAction(): Unit = Unit
 
   protected open fun prepareCommandArgs(mode: JekyllMode): List<String> {
-    val args = args.get().toMutableList()
-    return args
+    return this.args.get()
   }
 
   protected open fun prepareContainerArgs(mode: JekyllMode): List<String> {
@@ -160,20 +158,10 @@ public abstract class ContainerExecTask internal constructor(private val executa
       "-i",
       "--rm",
       "--init",
-      "-e=JEKYLL_ROOTLESS=${if (mode == PODMAN) "1" else "0"}",
-      "-w=$containerPwd",
+      "-w=${workingDir.asFile.get().absolutePath}",
     )
-    val volumes = containerVolumes.mapNotNull { (k, _) ->
-      containerVolume(k)
-    } + "-v=${workingDir.asFile.get().absolutePath}:$containerPwd${if (mode == JekyllMode.PODMAN) ":Z" else ""}"
-    args += volumes.toSet()
+    if (mode == PODMAN) args += "-e=JEKYLL_ROOTLESS=1"
+    args += containerVolumes.mapNotNull(::getContainerVolume)
     return args + containerArgs.get()
-  }
-
-  public companion object {
-    public val containerRoot: File = File("/srv/jekyll")
-    public val containerPwd: File = containerRoot.resolve("_pwd")
-    public val containerSource: File = containerPwd
-    public val containerDestination: File = containerRoot.resolve("_outputs")
   }
 }
