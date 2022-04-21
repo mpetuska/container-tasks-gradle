@@ -17,7 +17,7 @@ import java.net.URI
 public abstract class JekyllBuildTask : JekyllExecTask() {
   @get:Input
   @get:Optional
-  @get:Option(option = "--disable-disk-cache", description = "Disable caching to disk in non-safe mode")
+  @get:Option(option = "disable-disk-cache", description = "Disable caching to disk in non-safe mode")
   public abstract val disableBuildCache: Property<Boolean>
 
   @get:Input
@@ -31,7 +31,8 @@ public abstract class JekyllBuildTask : JekyllExecTask() {
 
   @Option(
     option = "config",
-    description = "Specify config files instead of using _config.yml automatically. " + "Settings in later files override settings in earlier files."
+    description = "Specify config files instead of using _config.yml automatically. " +
+        "Settings in later files override settings in earlier files."
   )
   public fun config(paths: List<String>) {
     paths.map(::File).forEach(config::from)
@@ -101,7 +102,10 @@ public abstract class JekyllBuildTask : JekyllExecTask() {
   @get:Optional
   @get:Option(
     option = "incremental",
-    description = "Enable the experimental incremental build feature. " + "Incremental build only re-builds posts and pages that have changed, " + "resulting in significant performance improvements for large sites, " + "but may also break site generation in certain cases."
+    description = "Enable the experimental incremental build feature. " +
+        "Incremental build only re-builds posts and pages that have changed, " +
+        "resulting in significant performance improvements for large sites, " +
+        "but may also break site generation in certain cases."
   )
   public abstract val incremental: Property<Boolean>
 
@@ -168,6 +172,7 @@ public abstract class JekyllBuildTask : JekyllExecTask() {
     layouts.asFile.orNull?.let(::addContainerVolume)
   }
 
+  @Suppress("ComplexMethod")
   override fun prepareJekyllArgs(mode: JekyllMode): List<String> {
     val args = super.prepareJekyllArgs(mode).toMutableList()
     if (disableBuildCache.getOrElse(false)) args += "--disable-disk-cache"

@@ -1,9 +1,9 @@
 package dev.petuska.jekyll.task
 
-import org.gradle.work.DisableCachingByDefault
+import org.gradle.api.tasks.UntrackedTask
 
 @Suppress("LeakingThis")
-@DisableCachingByDefault(because = "Not worth caching")
+@UntrackedTask(because = "Must always run")
 public abstract class BundleExecTask : ContainerExecTask("bundle") {
   init {
     group = "jekyll"

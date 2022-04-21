@@ -21,7 +21,7 @@ import java.io.File
 import java.io.OutputStream
 import javax.inject.Inject
 
-@Suppress("LeakingThis")
+@Suppress("LeakingThis", "TooManyFunctions")
 public abstract class ContainerExecTask internal constructor(private val executable: String) :
   DefaultTask(),
   JekyllModeScope,
@@ -59,25 +59,23 @@ public abstract class ContainerExecTask internal constructor(private val executa
   protected abstract val execHandleFactory: ExecHandleFactory
 
   init {
-    workingDir.convention(project.layout.dir(project.provider { temporaryDir }))
+    workingDir.convention(project.layout.dir(project.provider { temporaryDir.resolve("pwd") }))
   }
 
-  private val containerVolumes = mutableSetOf<String>()
+  private val containerVolumes = mutableSetOf<File>()
 
-  private fun getContainerVolume(hostPath: String): String? = getContainerVolume(File(hostPath))
-
-  private fun getContainerVolume(hostFile: File): String? = if (hostFile.exists()) {
-    val hostPath = hostFile.absolutePath
-    "-v=$hostPath:$hostPath"
+  private fun getContainerVolume(hostFile: File, containerFile: File = hostFile): String? = if (hostFile.exists()) {
+    "-v=${hostFile.absolutePath}:${containerFile.absolutePath}"
       .let { if (resolvedMode == DOCKER) it else "$it:Z" }
   } else null
 
   protected fun addContainerVolume(hostFile: File) {
     hostFile.mkdirs()
-    containerVolumes.add(hostFile.absolutePath)
+    containerVolumes.add(hostFile)
   }
 
   @TaskAction
+  @Suppress("UnusedPrivateMember")
   private fun action() {
     resolveMode()
     beforeAction()
@@ -160,7 +158,14 @@ public abstract class ContainerExecTask internal constructor(private val executa
       "--init",
       "-w=${workingDir.asFile.get().absolutePath}",
     )
+    getContainerVolume(
+      project.buildDir.resolve(".bundle/$name").also(File::mkdirs),
+      File("/usr/local/bundle")
+    )?.let(args::add)
     if (mode == PODMAN) args += "-e=JEKYLL_ROOTLESS=1"
+    environment.get().forEach { (k, v) ->
+      args += "-e=$k=$v"
+    }
     args += containerVolumes.mapNotNull(::getContainerVolume)
     return args + containerArgs.get()
   }

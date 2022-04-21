@@ -6,7 +6,7 @@ public enum class JekyllMode {
   NATIVE, PODMAN, DOCKER
 }
 
-@Suppress("PropertyName")
+@Suppress("PropertyName", "VariableNaming")
 public interface JekyllModeScope {
   @get:Internal
   public val NATIVE: JekyllMode get() = JekyllMode.NATIVE

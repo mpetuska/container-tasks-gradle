@@ -8,12 +8,12 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.UntrackedTask
 import org.gradle.api.tasks.options.Option
-import org.gradle.work.DisableCachingByDefault
 import java.io.File
 
 @Suppress("LeakingThis")
-@DisableCachingByDefault(because = "Not worth caching")
+@UntrackedTask(because = "Must always run")
 public abstract class JekyllInitTask : JekyllExecTask() {
   @get:Input
   @get:Optional

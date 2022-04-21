@@ -10,6 +10,8 @@ import dev.petuska.jekyll.task.JekyllServeTask
 import dev.petuska.jekyll.util.ProjectEnhancer
 import org.gradle.api.Task
 import org.gradle.api.internal.plugins.DslObject
+import org.gradle.api.provider.Property
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Copy
 import org.gradle.language.jvm.tasks.ProcessResources
 import java.io.File
@@ -23,17 +25,20 @@ internal fun ProjectEnhancer.configure(sourceSets: JekyllSourceSets) {
         objects.directoryProperty()
           .convention(project.layout.buildDirectory.dir(it.destinationDir.absolutePath))
       }
+      sourceSet.processResourcesTask.setFinal(resourcesTask)
       val assembleTask = assembleTask(sourceSet)
       sourceSet.jekyll.compiledBy(assembleTask) {
         objects.directoryProperty()
           .convention(project.layout.buildDirectory.dir(it.destinationDir.absolutePath))
       }
+      sourceSet.assembleTask.setFinal(assembleTask)
       val buildTask = buildTask(sourceSet)
       sourceSet.allSources.compiledBy(buildTask, JekyllBuildTask::destination)
-      serveTask(sourceSet)
-      execTask(sourceSet)
-      bundleExecTask(sourceSet)
-      initTask(sourceSet)
+      sourceSet.buildTask.setFinal(buildTask)
+      sourceSet.serveTask.setFinal(serveTask(sourceSet))
+      sourceSet.execTask.setFinal(execTask(sourceSet))
+      sourceSet.bundleExecTask.setFinal(bundleExecTask(sourceSet))
+      sourceSet.initTask.setFinal(initTask(sourceSet))
     }
     register("main")
     whenObjectRemoved { sourceSet ->
@@ -44,6 +49,11 @@ internal fun ProjectEnhancer.configure(sourceSets: JekyllSourceSets) {
       tasks.findByName(initTaskName(sourceSet.name))?.let(tasks::remove)
     }
   }
+}
+
+private fun <T : Task> Property<T>.setFinal(provider: Provider<T>) {
+  set(provider)
+  finalizeValue()
 }
 
 private inline fun <reified T : Task> ProjectEnhancer.registerTask(
@@ -68,7 +78,13 @@ private fun ProjectEnhancer.assembleTask(sourceSet: JekyllSourceSet) =
       sourceSet.jekyll.destinationDirectory.asFile.get()
     }
     from(sourceSet.resources.classesDirectory)
-    from(sourceSet.jekyll)
+    from(sourceSet.jekyll) { cp ->
+      cp.rename {
+        if (it.endsWith(".liquid", ignoreCase = true))
+          it.replace(".liquid", ".html", ignoreCase = true)
+        else it
+      }
+    }
   }
 
 private fun ProjectEnhancer.buildTask(sourceSet: JekyllSourceSet) =
@@ -106,16 +122,13 @@ private fun ProjectEnhancer.initTask(sourceSet: JekyllSourceSet) =
     }
   }
 
-
 private fun ProjectEnhancer.bundleExecTask(sourceSet: JekyllSourceSet) =
   registerTask<BundleExecTask>(sourceSet.bundleExecTaskName) {
     workingDir.convention(layout.dir(provider { sourceSet.resources.srcDirs.first() }))
     mode.convention(sourceSet.mode)
     version.convention(sourceSet.version)
     environment.convention(sourceSet.environment)
-    outputs.upToDateWhen { false }
   }
-
 
 private fun ProjectEnhancer.execTask(sourceSet: JekyllSourceSet) =
   registerTask<JekyllExecTask>(sourceSet.execTaskName) {
@@ -125,7 +138,6 @@ private fun ProjectEnhancer.execTask(sourceSet: JekyllSourceSet) =
     environment.convention(sourceSet.environment)
     outputs.upToDateWhen { false }
   }
-
 
 private fun ProjectEnhancer.serveTask(sourceSet: JekyllSourceSet) =
   registerTask<JekyllServeTask>(sourceSet.serveTaskName) {

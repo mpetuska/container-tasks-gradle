@@ -5,9 +5,11 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.UntrackedTask
 import org.gradle.api.tasks.options.Option
 
 @Suppress("LeakingThis")
+@UntrackedTask(because = "Must always run")
 public abstract class JekyllExecTask : ContainerExecTask("jekyll") {
   @get:Input
   @get:Option(

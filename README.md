@@ -42,7 +42,8 @@ jekyll {
       mode // Explicitly set default jekyll execution mode for tasks linked to this sourceSet and stop it from being automatically detected.
       version // Set docker.io/jekyll/jekyll image version to use for containerised executions  linked to this sourceSet
       environment // Modify the default environment variables for jekyll tasks linked to this sourceSet
-      sources // Add additional source roots to this sourceSet
+      jekyll // Add additional jekyll source roots to this sourceSet
+      resources // Add additional jekyll resource roots to this sourceSet
     }
   }
 }
@@ -53,13 +54,17 @@ jekyll {
 The plugin generates the following gradle tasks for each sourceSet. All tasks wrap jekyll tasks with their options
 exposed as gradle options. To learn more run `./gradlew help --task=<task>`
 
-* BundleExecTask: named as `bundle<SourceSetName>Exec`
-* JekyllExecTask: named as `jekyll<SourceSetName>Exec`
-* JekyllInitTask: named as `jekyll<SourceSetName>Init`
-* JekyllBuildTask: named as `jekyll<SourceSetName>Build`
-* JekyllServeTask: named as `jekyll<SourceSetName>Serve`
+* `bundle<SourceSetName>Exec: BundleExecTask` - executes `bundle` commands on the sourceSet
+* `jekyll<SourceSetName>Exec: JekyllExecTask` - executes `jekyll` commands on the sourceSet
+* `jekyll<SourceSetName>Init: JekyllInitTask` - initialises the sourceSet with default jekyll scaffold
+* `jekyll<SourceSetName>ProcessResources: ProcessResources` - processes sourceSet resources
+  into `resources/jekyll/<sourceSet>`
+* `jekyll<SourceSetName>Assemble: Copy` - assembles all sourceSet sources into `build/jekyll/<sourceSet>/sources`
+* `jekyll<SourceSetName>Build: JekyllBuildTask` - builds the sourceSet into `build/jekyll/<sourceSet>/site`
+* `jekyll<SourceSetName>Serve: JekyllServeTask` - assembles and serves the sourceSet
+  from `build/jekyll/<sourceSet>/sources` (supports `--continuous` execution)
 
-In addition to sourceSet tasks, two generic exec tasks are also provided for cli usage:
+In addition to sourceSet tasks, two generic exec tasks are also provided for CLI usage:
 
 * BundleExecTask: named as `bundleExec`
 * JekyllExecTask: named as `jekyllExec`

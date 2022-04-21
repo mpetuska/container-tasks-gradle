@@ -1,18 +1,20 @@
 package dev.petuska.jekyll.task
 
 import dev.petuska.jekyll.extension.domain.JekyllMode
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.UntrackedTask
 import org.gradle.api.tasks.options.Option
-import org.gradle.work.DisableCachingByDefault
 import java.io.File
 import java.net.ServerSocket
 
 @Suppress("LeakingThis")
-@DisableCachingByDefault(because = "Not worth caching")
+@UntrackedTask(because = "Must always run")
 public abstract class JekyllServeTask : JekyllBuildTask() {
 
   @get:Input
@@ -109,13 +111,19 @@ public abstract class JekyllServeTask : JekyllBuildTask() {
     sslCert.set(File(path))
   }
 
+  @get:Internal
+  public abstract override val source: DirectoryProperty
+
   init {
     description = "Serves jekyll website"
     ignoreExitValue.convention(true)
     host.convention("localhost")
+    @Suppress("MagicNumber")
     port.convention(project.provider { findPort(4000) })
+    @Suppress("MagicNumber")
     liveReloadPort.convention(project.provider { findPort(35729) })
     liveReload.convention(true)
+    destination.convention(project.layout.dir(project.provider { temporaryDir.resolve("destination") }))
   }
 
   override val command: String = "serve"
