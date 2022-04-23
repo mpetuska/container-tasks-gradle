@@ -29,6 +29,7 @@ public abstract class ContainerExecTask(
   init {
     workingDir.convention(project.layout.dir(project.provider { temporaryDir }))
     mode.convention(project.provider { Mode.detect(executable.get()) })
+    version.convention("latest")
 
     addContainerVolume(workingDir.asFile)
     addContainerVolume(project.provider { project.rootDir.resolve(".git") })
