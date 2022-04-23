@@ -14,7 +14,7 @@ Supports running via native jekyll installations as well as podman or docker con
 
 ```kotlin
 plugins {
-  id("dev.petuska.jekyll") version "<VERSION>"
+  id("dev.petuska.container.jekyll") version "<VERSION>"
 }
 ```
 
