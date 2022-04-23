@@ -3,5 +3,5 @@ plugins {
   id("com.gradle.enterprise") version "3.8.1"
 }
 
-rootProject.name = "jekyll-gradle"
-include("jekyll-gradle-plugin")
+rootProject.name = "container-tasks-gradle"
+include("container-tasks-gradle-plugin")

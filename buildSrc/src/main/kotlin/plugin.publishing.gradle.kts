@@ -7,27 +7,9 @@ plugins {
 }
 
 description = """
-  Provides easy configuration and tasks for managing your jekyll projects via gradle. 
-  Supports running via native jekyll installations as well as podman or docker container runtimes.
+  Provides various tasks and abstractions for running executables via native installations 
+  as well as podman or docker container runtimes.
 """.trimIndent()
-
-gradlePlugin {
-  plugins {
-    create(name) {
-      id = "dev.petuska.jekyll"
-      displayName = "Jekyll Gradle Plugin"
-      description = project.description
-      implementationClass = "dev.petuska.jekyll.JekyllPlugin"
-    }
-  }
-}
-
-pluginBundle {
-  website = "https://github.com/mpetuska/${rootProject.name}"
-  vcsUrl = "https://github.com/mpetuska/${rootProject.name}.git"
-  tags = listOf("jekyll", "documentation", "ssg")
-  description = project.description
-}
 
 publishing {
   publications {

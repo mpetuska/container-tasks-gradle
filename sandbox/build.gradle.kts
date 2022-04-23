@@ -1,5 +1,5 @@
 plugins {
-  id("dev.petuska.jekyll")
+  id("dev.petuska.container.jekyll")
 }
 
 gradleEnterprise {
@@ -10,11 +10,11 @@ gradleEnterprise {
 }
 
 tasks {
-  named("jekyllMainInit", dev.petuska.jekyll.task.JekyllInitTask::class.java) {
+  named("jekyllMainInit", dev.petuska.container.jekyll.task.JekyllInitTask::class.java) {
     force.set(true)
   }
-  val bundleMainExec = named("bundleMainExec", dev.petuska.jekyll.task.BundleExecTask::class.java)
-  register("setupMain", dev.petuska.jekyll.task.BundleExecTask::class.java) {
+  val bundleMainExec = named("bundleMainExec", dev.petuska.container.jekyll.task.BundleExecTask::class.java)
+  register("setupMain", dev.petuska.container.jekyll.task.BundleExecTask::class.java) {
     dependsOn("jekyllMainInit")
     workingDir.set(bundleMainExec.flatMap { it.workingDir })
     args.addAll("add", "webrick")
