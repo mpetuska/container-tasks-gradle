@@ -33,6 +33,7 @@ internal data class ContainerRunner(
   override val ignoreExitValue: Property<Boolean>,
   val prepareContainerArgs: (Mode) -> List<String> = { args.get() },
   val prepareCommandArgs: (Mode) -> List<String> = { containerArgs.get() },
+  val prepareContainerExecutable: (Mode, String) -> String = {_,_ -> executable.get() },
   val logger: PrefixedLogger? = null
 ) : ContainerExecInputs {
   override fun getExtensions(): ExtensionContainer = error("Not implemented")
@@ -63,7 +64,7 @@ internal data class ContainerRunner(
         "run"
       ) + prepareContainerArgs(mode.get()) + listOf(
         "${image.get()}:${version.get()}",
-        executable.get(),
+        prepareContainerExecutable(mode.get(), executable.get()),
       )
       exec.args(cmd + cmdArgs)
     }

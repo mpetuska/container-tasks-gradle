@@ -77,6 +77,8 @@ public abstract class ContainerExecTask(
     return args + containerArgs.get()
   }
 
+  protected open fun prepareContainerExecutable(mode: Mode, executable: String): String = executable
+
   private fun execute() {
     val isContinuous = project.gradle.startParameter.isContinuous
     val runner = ContainerRunner(
@@ -93,6 +95,7 @@ public abstract class ContainerExecTask(
       containerVolumes = containerVolumes,
       prepareCommandArgs = ::prepareCommandArgs,
       prepareContainerArgs = ::prepareContainerArgs,
+      prepareContainerExecutable = ::prepareContainerExecutable,
       logger = logger
     )
     if (isContinuous) {
