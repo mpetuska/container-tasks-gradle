@@ -1,14 +1,9 @@
 package dev.petuska.container.task
 
 import dev.petuska.container.task.runner.ContainerRunner
-import dev.petuska.container.task.runner.ContainerRunner.Handle
 import dev.petuska.container.util.PrefixedLogger
-import org.gradle.api.DefaultTask
-import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
-import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.TaskAction
-import org.gradle.deployment.internal.DeploymentRegistry
+import org.gradle.process.internal.ExecHandle
 import org.gradle.process.internal.ExecHandleFactory
 import java.io.File
 import java.lang.ProcessBuilder.Redirect
@@ -17,11 +12,10 @@ import javax.inject.Inject
 @Suppress("LeakingThis", "TooManyFunctions")
 public abstract class ContainerExecTask(
   logMarker: String = "container-exec",
-) : DefaultTask(), ContainerExecInputs {
-  private val _logger: PrefixedLogger = PrefixedLogger(logMarker, super.getLogger())
-
-  @Internal
-  public override fun getLogger(): PrefixedLogger = _logger
+) : AsyncExecTask<ExecHandle, ContainerRunner>(
+  handleType = ContainerRunner.Handle::class,
+  logMarker = logMarker
+), ContainerExecInputs {
 
   @get:Inject
   protected abstract val execHandleFactory: ExecHandleFactory
@@ -48,18 +42,7 @@ public abstract class ContainerExecTask(
       .let { if (mode.get() == DOCKER) it else "$it:Z" }
   } else null
 
-  protected fun <T> Property<T>.setFinal(value: T) {
-    set(value)
-    finalizeValue()
-  }
-
-  protected open fun beforeAction(): Unit = Unit
-
-  protected open fun afterAction(): Unit = Unit
-
-  protected open fun prepareCommandArgs(mode: Mode): List<String> {
-    return args.get()
-  }
+  protected open fun prepareCommandArgs(mode: Mode): List<String> = args.get()
 
   protected open fun prepareContainerArgs(mode: Mode): List<String> {
     val args = mutableListOf(
@@ -69,7 +52,6 @@ public abstract class ContainerExecTask(
       "--network=host",
       "-w=${workingDir.asFile.get().absolutePath}",
     )
-    if (mode == PODMAN) args += "-e=JEKYLL_ROOTLESS=1"
     environment.get().forEach { (k, v) ->
       args += "-e=$k=$v"
     }
@@ -79,47 +61,23 @@ public abstract class ContainerExecTask(
 
   protected open fun prepareContainerExecutable(mode: Mode, executable: String): String = executable
 
-  private fun execute() {
-    val isContinuous = project.gradle.startParameter.isContinuous
-    val runner = ContainerRunner(
-      execHandleFactory = execHandleFactory,
-      executable = executable,
-      args = args,
-      containerArgs = containerArgs,
-      workingDir = workingDir,
-      ignoreExitValue = ignoreExitValue,
-      environment = environment,
-      mode = mode,
-      version = version,
-      image = image,
-      containerVolumes = containerVolumes,
-      prepareCommandArgs = ::prepareCommandArgs,
-      prepareContainerArgs = ::prepareContainerArgs,
-      prepareContainerExecutable = ::prepareContainerExecutable,
-      logger = logger
-    )
-    if (isContinuous) {
-      val deploymentRegistry = services.get(DeploymentRegistry::class.java)
-      val deploymentHandle = deploymentRegistry.get("jekyll", Handle::class.java)
-      if (deploymentHandle == null) {
-        deploymentRegistry.start(
-          "jekyll",
-          DeploymentRegistry.ChangeBehavior.BLOCK,
-          Handle::class.java, runner
-        )
-      }
-    } else {
-      runner.execute(services).assertNormalExitValue()
-    }
-  }
-
-  @TaskAction
-  @Suppress("UnusedPrivateMember")
-  private fun action() {
-    beforeAction()
-    execute()
-    afterAction()
-  }
+  override fun buildRunner(): ContainerRunner = ContainerRunner(
+    execHandleFactory = execHandleFactory,
+    executable = executable,
+    args = args,
+    containerArgs = containerArgs,
+    workingDir = workingDir,
+    ignoreExitValue = ignoreExitValue,
+    environment = environment,
+    mode = mode,
+    version = version,
+    image = image,
+    containerVolumes = containerVolumes,
+    prepareCommandArgs = ::prepareCommandArgs,
+    prepareContainerArgs = ::prepareContainerArgs,
+    prepareContainerExecutable = ::prepareContainerExecutable,
+    logger = logger
+  )
 
   public enum class Mode {
     NATIVE, PODMAN, DOCKER;

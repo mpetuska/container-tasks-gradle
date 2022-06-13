@@ -1,3 +1,14 @@
+# 0.0.3
+
+## Build Versions
+
+* Gradle: 7.4.2
+* JDK: 11
+
+## Changes
+
+* Further abstractions for AsyncExecTask to allow for better reuse
+
 # 0.0.2
 
 ## Build Versions

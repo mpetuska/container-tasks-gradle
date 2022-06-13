@@ -8,8 +8,6 @@ import org.gradle.api.plugins.ExtensionContainer
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
-import org.gradle.deployment.internal.Deployment
-import org.gradle.deployment.internal.DeploymentHandle
 import org.gradle.internal.service.ServiceRegistry
 import org.gradle.process.ExecResult
 import org.gradle.process.ExecSpec
@@ -18,9 +16,10 @@ import org.gradle.process.internal.ExecHandle
 import org.gradle.process.internal.ExecHandleFactory
 import java.io.File
 import javax.inject.Inject
+import kotlin.reflect.KClass
 
-internal data class ContainerRunner(
-  val execHandleFactory: ExecHandleFactory,
+public data class ContainerRunner(
+  private val execHandleFactory: ExecHandleFactory,
   override val workingDir: DirectoryProperty,
   override val environment: MapProperty<String, Any>,
   override val executable: Property<String>,
@@ -31,19 +30,22 @@ internal data class ContainerRunner(
   override val containerVolumes: MapProperty<File, File>,
   override val containerArgs: ListProperty<String>,
   override val ignoreExitValue: Property<Boolean>,
-  val prepareContainerArgs: (Mode) -> List<String> = { args.get() },
-  val prepareCommandArgs: (Mode) -> List<String> = { containerArgs.get() },
-  val prepareContainerExecutable: (Mode, String) -> String = {_,_ -> executable.get() },
-  val logger: PrefixedLogger? = null
-) : ContainerExecInputs {
+  private val prepareContainerArgs: (Mode) -> List<String> = { args.get() },
+  private val prepareCommandArgs: (Mode) -> List<String> = { containerArgs.get() },
+  private val prepareContainerExecutable: (Mode, String) -> String = { _, _ -> executable.get() },
+  private val logger: PrefixedLogger? = null
+) : ContainerExecInputs, AsyncRunner<ExecHandle, ExecResult> {
   override fun getExtensions(): ExtensionContainer = error("Not implemented")
 
   override fun getName(): String = executable.get()
 
-  fun execute(services: ServiceRegistry): ExecResult =
-    services.get(ExecActionFactory::class.java).newExecAction().also(::configureExec).execute()
+  override fun execute(services: ServiceRegistry): ExecResult = services.get(ExecActionFactory::class.java)
+    .newExecAction()
+    .also(::configureExec)
+    .execute()
+    .also(ExecResult::assertNormalExitValue)
 
-  fun start(): ExecHandle {
+  override fun start(): ExecHandle {
     val execHandle = execHandleFactory.newExec().also(::configureExec).build()
     execHandle.start()
     return execHandle
@@ -71,17 +73,11 @@ internal data class ContainerRunner(
     logger?.info { "Executing[${exec.executable}]: ${exec.executable} ${exec.args.joinToString(" ")}" }
   }
 
-  internal abstract class Handle @Inject constructor(private val runner: ContainerRunner) : DeploymentHandle {
-    var process: ExecHandle? = null
-
-    override fun isRunning() = process != null
-
-    override fun start(deployment: Deployment) {
-      process = runner.start()
-    }
-
-    override fun stop() {
-      process?.abort()
+  public abstract class Handle
+  @Inject constructor(override val runner: ContainerRunner) : AsyncRunner.Handle<ExecHandle>() {
+    override fun abort(process: ExecHandle): Boolean {
+      process.abort()
+      return true
     }
   }
 }

@@ -34,6 +34,12 @@ public abstract class JekyllExecTask : ContainerExecTask("jekyll") {
     )
   }
 
+  override fun prepareContainerArgs(mode: Mode): List<String> {
+    val args = super.prepareContainerArgs(mode).toMutableList()
+    if (mode == PODMAN) args += "-e=JEKYLL_ROOTLESS=1"
+    return args
+  }
+
   protected override fun prepareCommandArgs(mode: Mode): List<String> {
     val args = super.prepareCommandArgs(mode).toMutableList()
     command?.let { args.add(0, it) }
