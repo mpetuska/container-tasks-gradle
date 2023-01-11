@@ -28,7 +28,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Restore Gradle cache
         id: cache
         uses: actions/cache@v2
@@ -75,7 +75,7 @@ jobs:
     needs: [ check ]
     if: ${{ github.event.inputs.skipGradlePluginPortal != 'true' }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Restore Gradle cache
         id: cache
         uses: actions/cache@v2
@@ -108,7 +108,7 @@ jobs:
     needs: [ check ]
     if: ${{ github.event.inputs.skipGitHub != 'true' }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Restore Gradle cache
         id: cache
         uses: actions/cache@v2
@@ -142,7 +142,7 @@ jobs:
     needs: [ check ]
     if: ${{ github.event.inputs.skipMavenCentral != 'true' }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Restore Gradle cache
         id: cache
         uses: actions/cache@v2
