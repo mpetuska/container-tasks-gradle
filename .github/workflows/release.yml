@@ -62,7 +62,7 @@ jobs:
           find public -type f -regex '.*\.\(htm\|html\|txt\|text\|js\|css\)$' -exec gzip -f -k {} \;
           echo '/jekyll-gradle /jekyll-gradle/jekyll-gradle/index.html 301' > public/_redirects;
           echo '/jekyll-gradle/index.html /jekyll-gradle/jekyll-gradle/index.html 301' >> public/_redirects;
-      - uses: crazy-max/ghaction-github-pages@v2
+      - uses: crazy-max/ghaction-github-pages@v3
         with:
           target_branch: gh-pages
           build_dir: public
